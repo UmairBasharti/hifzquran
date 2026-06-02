@@ -1,0 +1,25 @@
+# Secrets — NEVER bake into the image. HF Spaces injects these as runtime env vars.
+.env
+.env.local
+.env.*.local
+
+# Python virtualenv & caches (venv is Windows-built and useless in the Linux image anyway)
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Large Quran cache — the Dockerfile regenerates it at build time (RUN ... load_quran_data),
+# and it is gitignored so it is never in the HF Spaces build context regardless.
+quran/quran_data.json
+
+# Local HuggingFace cache (the image builds its own during the pre-fetch step)
+.cache/
+
+# Test / scratch artifacts
+test.mp3
+
+# VCS
+.git/
+.gitignore

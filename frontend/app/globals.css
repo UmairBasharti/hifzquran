@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'UthmanicHafs';
+  /* Self-hosted (same-origin) so it can never be blocked by a CDN/network/ad-blocker.
+     This is the official KFGQPC Uthmanic Hafs font Quran.com uses. */
+  src: url('/fonts/UthmanicHafs1Ver18.woff2') format('woff2'),
+       url('/fonts/UthmanicHafs1Ver18.ttf') format('truetype');
+  font-display: swap;
+}
+
+@theme {
+  --font-uthmanic: 'UthmanicHafs', 'Traditional Arabic', 'Scheherazade', serif;
+}
+
+/* Base styles for calm, accessible UI */
+body {
+  background-color: #FAFAFA;
+  color: #111827;
+}
+
+/* Custom utility class since Tailwind 4 requires it mapped in @theme above */
+.font-uthmanic {
+  font-family: var(--font-uthmanic);
+}

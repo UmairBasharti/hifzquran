@@ -1,0 +1,144 @@
+# HifzAI — Master Prompt for Antigravity IDE / Claude Code
+# Paste this entire prompt as your first message to start the project.
+# After this, the AI has full context and you can give simple task instructions.
+
+---
+
+You are building **HifzAI** — a free, open-source Quran memorization web application that replicates Tarteel AI's Hifz feature, built to be integrated into Quran.com and gifted to the global Muslim community at zero cost.
+
+Before doing anything, read these files in this exact order:
+1. `CLAUDE.md` — master rules (read every word, follow every rule)
+2. `docs/PRD.md` — what we are building and why
+3. `docs/Architecture.md` — how all pieces connect
+4. `docs/TechStack.md` — exact tools and versions
+5. `docs/API.md` — frontend/backend contract
+6. `docs/QuranData.md` — Arabic text and Unicode rules
+7. `docs/Database.md` — Supabase schema
+8. `docs/UIUX.md` — design and component rules
+9. `docs/Deployment.md` — how to run locally
+10. `docs/Security.md` — audio privacy rules
+
+---
+
+## Project Summary (read after the files above)
+
+**What it does**: User selects a Surah, clicks "Start Hifz Mode", all Arabic text hides. User recites from memory. System listens live via microphone, reveals each correct word in green in real time, and flags wrong words in red with error type. Exactly like Tarteel AI — but completely free.
+
+**Two processes — never merged**:
+- Next.js 16.2.6 (JavaScript only, no TypeScript) — frontend + light API routes
+- Python 3.13 + FastAPI 0.124.4 — all AI and audio processing
+
+**The 4 critical technical rules that make this work**:
+1. Audio captured at 16kHz mono Float32 PCM in browser (not device default 44.1kHz)
+2. Sliding window: 3s window, 1.5s step — never hard fixed cuts (prevents word slicing)
+3. Constrained decoding: pass current Ayah text as `initial_prompt` to faster-whisper
+4. Tuned VAD: `min_silence_duration_ms: 800` (not default 2000 — too aggressive for Quran)
+
+**Arabic comparison — two stages, built-in Python only (no camel-tools)**:
+- Stage 1: `strip_tashkeel()` using `unicodedata.normalize('NFD')` → word match
+- Stage 2: `normalize_arabic()` using `unicodedata.normalize('NFD')` → error type
+
+**ASR model**: `tarteel-ai/whisper-base-ar-quran` via `faster-whisper 1.2.1` — the only permitted model, no substitutes.
+
+**Quran text**: Fetched from api.quran.com once at Python startup → saved to `quran_data.json` → loaded into memory. Never fetched during live sessions.
+
+**Arabic font**: UthmanicHafs from Quran Foundation CDN — same font as Quran.com:
+`https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2`
+
+**Privacy advantage**: Audio processed in memory only, discarded immediately after transcription. Never stored, logged, or sent anywhere. Better than Tarteel which stores audio to cloud every 20 seconds.
+
+---
+
+## Code Style — Every File Must Follow These
+
+- JavaScript only — no TypeScript, no .ts .tsx .jsx files ever
+- async/await always — never .then() .catch() chains
+- Full descriptive variable names — never res, req, cb, fn, val, e, tmp
+- One plain-English comment above every function
+- Multi-line readable code — never one-liner chains
+- Max 2 levels of nesting — extract to named functions if deeper
+- Descriptive error messages in every catch block
+
+---
+
+## MVP Features to Build
+
+- [ ] Surah search and selection (all 114 Surahs, client-side filter)
+- [ ] Custom Ayah range selector (start Ayah to end Ayah)
+- [ ] Hifz Mode — text hides, only Ayah numbers visible
+- [ ] Live mic at 16kHz mono via sliding window WebSocket chunks
+- [ ] Constrained decoding with Ayah text as initial_prompt
+- [ ] Word-by-word reveal as user recites correctly (green)
+- [ ] Wrong word detection with Repeat Until Correct (red, holds position)
+- [ ] Tajweed error type labels (missing_shadda, wrong_harakat, etc.)
+- [ ] Session summary with word-by-word breakdown
+- [ ] Per-Surah offline mode (IndexedDB cache)
+
+## Do NOT Build Yet
+User accounts, dashboards, history, mobile app, multiple reciters.
+
+---
+
+## Testing Order — Never Skip Ahead
+
+Phase 1: Surah Al-Kawthar (Ch.108 — 3 Ayahs) — full end-to-end validation
+Phase 2: Surah Al-Ikhlas (Ch.112 — 4 Ayahs)
+Phase 3: Surah Al-Falaq (Ch.113 — 5 Ayahs)
+Phase 4: Surah Al-Nas (Ch.114 — 6 Ayahs)
+Phase 5: Full Quran — only after all 4 above pass
+
+---
+
+## Directory Structure
+
+```
+hifzai/
+├── CLAUDE.md
+├── AGENTS.md
+├── docs/ (all 9 docs files)
+├── frontend/
+│   ├── app/
+│   │   ├── layout.js
+│   │   ├── page.js                    (Surah selector)
+│   │   ├── hifz/[surahId]/page.js     (Hifz Mode)
+│   │   └── api/surah/[id]/route.js
+│   ├── components/
+│   │   ├── SurahSelector/SurahSelector.js
+│   │   ├── HifzMode/HifzMode.js       (audio + WebSocket)
+│   │   ├── AyahDisplay/AyahDisplay.js
+│   │   └── MicButton/MicButton.js
+│   ├── lib/
+│   │   ├── supabase.js
+│   │   ├── websocket.js
+│   │   └── quran.js
+│   └── public/surah_index.json        (generated by generate_surah_index.py)
+└── backend/
+    ├── main.py
+    ├── websocket_handler.py
+    ├── asr/whisper_engine.py
+    ├── alignment/engine.py
+    ├── quran/
+    │   ├── loader.py
+    │   ├── generate_surah_index.py
+    │   └── quran_data.json
+    ├── tajweed/checker.py
+    └── requirements.txt
+```
+
+---
+
+## First Task — Start Here
+
+Now that you have read all context files, begin with **Phase 1, Step 1**:
+
+Set up the Python backend project structure:
+1. Create `backend/requirements.txt` with exact contents from `docs/TechStack.md` Section 4
+2. Create `backend/main.py` — FastAPI app entry point with startup event that calls `loader.py`
+3. Create `backend/quran/loader.py` — fetches quran_data.json from api.quran.com on startup
+4. Create `backend/.env.example` with all required variable names (no values)
+
+Do not touch the frontend yet. Confirm the backend starts with:
+`uvicorn main:app --reload --host 0.0.0.0 --port 8000`
+and the health endpoint returns `{ "status": "ready" }`.
+
+Ask me before moving to the next step.

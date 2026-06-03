@@ -9,7 +9,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # Mirrors CLAUDE.md — all rules identical. CLAUDE.md is the source of truth.
 # Read this file completely before taking any action in this project.
 # Every rule here is mandatory. None are optional or suggestions.
-# Last updated: Post audit — all 9 issues resolved.
+# Last updated: 2026-06-04 — aligned with running codebase.
 
 ---
 
@@ -37,7 +37,7 @@ This is a genuine competitive and ethical advantage. Never compromise it.
 
 ### Project Identity
 - **Name**: HifzAI
-- **GitHub**: https://github.com/UmairBasharti/hifzai
+- **GitHub**: https://github.com/UmairBasharti/hifzquran
 - **Owner**: Umair Basharti
 - **License**: MIT — fully open source
 - **Target users**: Global Muslim community, anyone memorizing the Quran
@@ -108,7 +108,7 @@ They must never be merged into one.
 | Tool | Version | Notes |
 |------|---------|-------|
 | Next.js | 16.2.6 | App Router ONLY — never Pages Router |
-| React | 19.1.7 | |
+| React | 19.2.4 | |
 | JavaScript | ES2024 | Plain JS ONLY — zero TypeScript |
 | Tailwind CSS | latest | No custom .css files |
 | @supabase/supabase-js | latest | |
@@ -121,7 +121,7 @@ They must never be merged into one.
 | Uvicorn | latest | |
 | faster-whisper | 1.2.1 | Only permitted ASR engine |
 | supabase-py | latest | |
-| librosa | latest | Audio amplitude normalization |
+| (amplitude normalization is handled with numpy — no librosa needed) | | |
 | numpy | latest | |
 | python-dotenv | latest | |
 | python-levenshtein | latest | Word distance comparison |
@@ -197,24 +197,32 @@ Chunk 2:         [========================]
 Chunk 3:                 [========================]
 ```
 
-### Rule: Use Constrained Decoding With initial_prompt
+### Rule: Do NOT Use initial_prompt — Quran-Fine-Tuned Model Only
 
-Since we always know which Ayah the user is reciting, pass the expected
-Arabic text as an initial_prompt to faster-whisper. This biases the beam
-search toward expected Quranic vocabulary and dramatically reduces false errors.
+**Tested and proven**: passing the expected Ayah text as `initial_prompt`
+caused Whisper to **parrot it back from silence/noise**, making words turn
+green before the user actually recited. The Quran-fine-tuned model
+(`OdyAsh/faster-whisper-base-ar-quran`) already recognizes Quranic vocabulary
+without that crutch. Rely on the alignment engine (which only advances on
+matching words) to reject stray/hallucinated text.
 
 ```python
-# CORRECT — constrained decoding
+# CORRECT — let the fine-tuned model transcribe freely, alignment guards accuracy
 segments, info = whisper_model.transcribe(
     audio_chunk_float32,
     language="ar",
+    beam_size=whisper_beam_size,
+    condition_on_previous_text=False,
     vad_filter=True,
-    initial_prompt=current_expected_ayah_arabic_text,
-    beam_size=5
+    vad_parameters={"min_silence_duration_ms": 800, "speech_pad_ms": 200, "threshold": 0.4},
+    no_speech_threshold=0.3,
 )
 
-# WRONG — open decoding with no constraint
-segments, info = whisper_model.transcribe(audio_chunk_float32, language="ar")
+# WRONG — initial_prompt causes hallucination from silence
+segments, info = whisper_model.transcribe(
+    audio_chunk_float32, language="ar",
+    initial_prompt=expected_ayah_text  # DO NOT DO THIS
+)
 ```
 
 ### Rule: Tune VAD Parameters for Quran Recitation
@@ -271,12 +279,11 @@ def classify_tajweed_error(expected_word, spoken_word):
 ## 6. DIRECTORY STRUCTURE
 
 ```
-hifzai/
+hifzquran/
 ├── CLAUDE.md
 ├── AGENTS.md
+├── README.md
 ├── .gitignore
-├── .env.local                              (frontend secrets — never commit)
-├── .env                                    (backend secrets — never commit)
 │
 ├── docs/
 │   ├── PRD.md
@@ -290,43 +297,52 @@ hifzai/
 │   └── Security.md
 │
 ├── frontend/
+│   ├── .env.local                          (frontend secrets — never commit)
 │   ├── app/
 │   │   ├── layout.js
 │   │   ├── page.js                         (Surah search and selector)
+│   │   ├── error.js                        (Error boundary)
+│   │   ├── loading.js                      (Loading skeleton)
+│   │   ├── not-found.js                    (404 page)
 │   │   ├── hifz/
-│   │   │   └── [surahId]/
-│   │   │       └── page.js                 (Hifz Mode page)
+│   │   │   └── [id]/
+│   │   │       └── page.js                 (Hifz session page)
 │   │   └── api/
-│   │       └── surah/
-│   │           └── [id]/
-│   │               └── route.js
+│   │       └── session/
+│   │           └── route.js                (Session save proxy to backend)
 │   ├── components/
 │   │   ├── SurahSelector/
 │   │   │   └── SurahSelector.js
-│   │   ├── HifzMode/
-│   │   │   └── HifzMode.js                 (WebSocket + audio capture + 16kHz resampling)
-│   │   ├── AyahDisplay/
-│   │   │   └── AyahDisplay.js
-│   │   └── MicButton/
-│   │       └── MicButton.js
+│   │   └── HifzSession/
+│   │       ├── HifzSession.js              (WebSocket + audio capture + mode switching)
+│   │       ├── WordRenderer.js             (QCF Mushaf glyph rendering)
+│   │       ├── AudioPlayer.js              (Listen mode — multi-qari recitation playback)
+│   │       └── SessionSummary.js           (End-of-session results + tajweed breakdown)
 │   ├── lib/
-│   │   ├── supabase.js
-│   │   ├── websocket.js                    (WebSocket client — sends 16kHz Float32 PCM)
-│   │   └── quran.js
+│   │   ├── audio.js                        (AudioRecorder — 16kHz AudioWorklet capture)
+│   │   ├── websocket.js                    (WebSocket client — auto-reconnect)
+│   │   ├── quran.js                        (Surah index search/filter)
+│   │   ├── surah_meanings.js               (English translations of 114 surah names)
+│   │   └── supabase.js
 │   └── public/
-│       └── surah_index.json                (114 records — generated by generate_surah_index.py)
+│       ├── audio-processor.js              (AudioWorklet — ring buffer + downsampling)
+│       ├── surah_index.json                (114 records — generated by generate_surah_index.py)
+│       └── fonts/                          (Uthmani + 604 QCF page fonts)
 │
 └── backend/
+    ├── .env                                (backend secrets — never commit)
     ├── main.py
-    ├── websocket_handler.py                (sliding window overlap logic lives here)
+    ├── websocket_handler.py                (WebSocket session + sliding window dispatch)
+    ├── supabase_db.py                      (Optional Supabase client)
     ├── asr/
-    │   └── whisper_engine.py               (constrained decoding + VAD param tuning)
+    │   └── whisper_engine.py               (Whisper model + VAD + noise gate)
     ├── alignment/
-    │   └── engine.py                       (two-stage comparison + deduplication)
+    │   └── engine.py                       (Fuzzy alignment + backtracking + stuck detection)
     ├── quran/
-    │   ├── loader.py
+    │   ├── loader.py                       (Quran data fetch + cache)
+    │   ├── normalization.py                (Arabic normalization — strip/fold/alef)
     │   ├── generate_surah_index.py         (run once — outputs frontend/public/surah_index.json)
-    │   └── quran_data.json
+    │   └── quran_data.json                 (auto-generated, gitignored)
     ├── tajweed/
     │   └── checker.py
     └── requirements.txt
@@ -342,8 +358,8 @@ hifzai/
 
 ### Audio Rules
 3. **Always capture at 16kHz mono** — AudioContext({ sampleRate: 16000 }) always
-4. **Sliding window overlap** — 3s window, 1.5s step. Never hard fixed cuts.
-5. **Always use constrained decoding** — pass current Ayah text as initial_prompt
+4. **Sliding window overlap** — 6s window, 0.8s step. Never hard fixed cuts.
+5. **Never use initial_prompt** — causes hallucination; the fine-tuned model doesn't need it
 6. **Tuned VAD parameters** — always override defaults (min_silence_duration_ms: 800)
 7. **Never store audio** — process in memory, discard immediately after transcription
 
@@ -369,25 +385,25 @@ hifzai/
 
 ### Scope Rules
 22. **MVP only** — no user accounts, dashboards, history until explicitly instructed
-23. **ASR model locked** — tarteel-ai/whisper-base-ar-quran only, no substitutes
+23. **ASR model locked** — OdyAsh/faster-whisper-base-ar-quran (or env override), no substitutes
 
 ---
 
 ## 8. MVP FEATURES
 
-- [ ] Surah search and selection by name or number (all 114 Surahs)
-- [ ] Custom Ayah range selection (start Ayah to end Ayah)
-- [ ] Hifz Mode — all Arabic text hidden, only Ayah numbers visible
-- [ ] Live mic at 16kHz mono via sliding window WebSocket chunks
-- [ ] Constrained decoding with Ayah text as initial_prompt
-- [ ] Real-time word-by-word reveal as user recites correctly
-- [ ] Two-stage word error detection (root match + tashkeel error type)
-- [ ] Basic tajweed error classification in feedback
-- [ ] Repeat Until Correct — session holds on wrong word until corrected or skipped
-- [ ] Session summary with word-by-word breakdown
-- [ ] Three session modes — Listen / Read / Memorize (Hifz)
-- [ ] Listen mode — recitation audio playback with word-by-word highlight and **reciter (qari)
-      selection (multiple qaris)**. This is audio *playback* only and does not change the ASR:
+- [x] Surah search and selection by name or number (all 114 Surahs)
+- [x] Custom Ayah range selection (start Ayah to end Ayah)
+- [x] Hifz Mode — all Arabic text hidden, only Ayah numbers visible
+- [x] Live mic at 16kHz mono via sliding window WebSocket chunks
+- [x] ASR transcription (fine-tuned Quran Whisper, no initial_prompt — see §4)
+- [x] Real-time word-by-word reveal as user recites correctly
+- [x] Two-stage word error detection (root match + tashkeel error type)
+- [x] Basic tajweed error classification in feedback
+- [x] Repeat Until Correct — session holds on wrong word until corrected or skipped
+- [x] Session summary with word-by-word breakdown
+- [x] Three session modes — Listen / Read / Memorize (Hifz)
+- [x] Listen mode — recitation audio playback with word-by-word highlight and **reciter (qari)
+      selection (12 reciters)**. This is audio *playback* only and does not change the ASR:
       recitation-checking remains Hafs 'an 'Asim only (see §1). Word timings + audio come from
       api.quran.com at request time (audio is not Quran text, so it is exempt from the
       "no runtime Quran fetch" rule).
@@ -439,10 +455,10 @@ Phase 5: Full Quran        — ONLY after all 4 above pass correctly
 | Code density | One-liner chains | Multi-line readable |
 | Nesting | More than 2 levels | Extract to named functions |
 | Catch messages | console.error(e) | Specific descriptive message |
-| ASR model | Any other model | tarteel-ai/whisper-base-ar-quran |
+| ASR model | Any other model | OdyAsh/faster-whisper-base-ar-quran |
 | Audio format | 44.1kHz stereo compressed | 16kHz mono Float32 PCM |
 | Audio chunking | Fixed hard cuts | 6s sliding window 0.8s step |
-| Decoding | Open transcription | Constrained with initial_prompt |
+| Decoding | initial_prompt (causes hallucination) | Open decoding + alignment guard |
 | VAD params | Default faster-whisper params | Quran-tuned (silence 800ms) |
 | Arabic comparison | Raw string equality | Two-stage: strip then normalize |
 | Arabic display | LTR, no lang/dir | dir="rtl" lang="ar" always |

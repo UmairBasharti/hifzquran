@@ -9,6 +9,7 @@ backend/venv/
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 
 # Quran data — large file, regenerated on first run
 backend/quran/quran_data.json
@@ -24,7 +25,16 @@ frontend/.next/
 .DS_Store
 Thumbs.db
 
-backend/.pytest_cache/
+# Agent / IDE caches
+.claude/
+
+# Scaffold files (create-next-app leftovers)
+frontend/public/file.svg
+frontend/public/globe.svg
+frontend/public/next.svg
+frontend/public/vercel.svg
+frontend/public/window.svg
+
 backend/test.mp3
 
 # Test audio — real voice recordings + downloaded recitations; never commit (privacy + size).

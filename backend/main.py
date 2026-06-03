@@ -2,11 +2,12 @@ import asyncio
 import os
 import sys
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 # Windows consoles default to cp1252, which cannot encode Arabic. Any Arabic text sent to
 # stdout (a log line, an error) would raise UnicodeEncodeError — and inside the audio loop
@@ -102,23 +103,32 @@ async def get_surah_endpoint(surah_number: int):
 
 # One word's outcome inside a session (matches API.md / Database.md word_results).
 class WordResultItem(BaseModel):
-    wordIndex: int
-    status: str  # "correct" | "wrong" | "skipped"
+    wordIndex: int = Field(ge=0)
+    status: Literal["correct", "wrong", "skipped"]
     errorType: str | None = None
     expected: str | None = None
     spoken: str | None = None
 
 
 # POST /session body — shape defined in API.md §POST /session.
+# Field constraints mirror the hifz_sessions DB CHECKs so bad input is rejected with a clean
+# 422 here instead of surfacing as an opaque 500 from the database on insert.
 class SessionCreateRequest(BaseModel):
-    surahNumber: int
-    startAyah: int
-    endAyah: int
-    totalWords: int
-    correctCount: int
-    wrongCount: int
-    skippedCount: int
+    surahNumber: int = Field(ge=1, le=114)
+    startAyah: int = Field(ge=1)
+    endAyah: int = Field(ge=1)
+    totalWords: int = Field(ge=1)
+    correctCount: int = Field(ge=0)
+    wrongCount: int = Field(ge=0)
+    skippedCount: int = Field(ge=0)
     wordResults: list[WordResultItem] = []
+
+    # The DB enforces end_ayah >= start_ayah; validate it up front for a clear 422.
+    @model_validator(mode="after")
+    def validate_ayah_range(self):
+        if self.endAyah < self.startAyah:
+            raise ValueError("endAyah must be greater than or equal to startAyah")
+        return self
 
 
 @app.post("/session", status_code=201)

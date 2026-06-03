@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import HifzSession from "../../../components/HifzSession/HifzSession";
-import { ArrowLeft } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
 async function getSurahData(id) {
@@ -12,12 +12,20 @@ async function getSurahData(id) {
                      
   const res = await fetch(`${backendUrl}/surah/${id}`, { cache: "no-store" });
   
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`Failed to fetch surah data: ${res.status}`);
+  if (res.ok) {
+    return await res.json();
   }
   
-  return res.json();
+  if (res.status === 404) {
+    return null;
+  }
+  
+  if (res.status === 503) {
+    return { isWarmingUp: true };
+  }
+  
+  // Only throw on genuine errors (non-503, non-404)
+  throw new Error(`Failed to fetch surah data: ${res.status}`);
 }
 
 export default async function HifzPage({ params }) {
@@ -28,45 +36,27 @@ export default async function HifzPage({ params }) {
     notFound();
   }
 
+  if (surahData.isWarmingUp) {
+    return (
+      <main className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
+        <div className="bg-amber-50 p-8 rounded-2xl max-w-md text-center border border-amber-100 shadow-sm">
+           <Loader2 className="w-10 h-10 animate-spin text-amber-500 mx-auto mb-4" />
+           <h2 className="text-xl font-bold text-gray-900 mb-2">Warming up the recogniser…</h2>
+           <p className="text-gray-600 mb-8 text-sm">
+             The AI model is currently loading into memory. This usually takes about 10–15 seconds on the first request.
+           </p>
+           <Link href={`/hifz/${id}`} className="inline-block bg-[#2ca4ab] hover:bg-teal-600 text-white font-semibold py-2.5 px-8 rounded-full transition-colors">
+             Refresh Page
+           </Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-white flex flex-col">
-      {/* Quran.com-style top bar */}
-      <header className="w-full bg-white/90 backdrop-blur border-b border-gray-100 z-30 sticky top-0">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link
-            href="/"
-            className="flex items-center text-gray-500 hover:text-[#2ca4ab] transition-colors shrink-0"
-            title="Back to Surahs"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium text-sm ml-2 hidden sm:inline">Back</span>
-          </Link>
-
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="relative w-7 h-7 shrink-0 flex items-center justify-center">
-              <span className="absolute inset-0 bg-gray-100 rotate-45 rounded-sm" />
-              <span className="relative z-10 text-xs font-bold text-gray-700">{id}</span>
-            </span>
-            <div className="flex flex-col leading-tight min-w-0">
-              <span className="font-bold text-gray-900 text-sm truncate">{surahData.nameSimple}</span>
-              <span className="text-[11px] text-gray-400 font-medium">
-                {surahData.totalAyahs} Ayahs · Hifz Mode
-              </span>
-            </div>
-          </div>
-
-          <span
-            className="font-uthmanic text-2xl text-gray-800 shrink-0 hidden sm:block leading-none pb-1"
-            dir="rtl"
-            lang="ar"
-          >
-            {surahData.nameArabic}
-          </span>
-        </div>
-      </header>
-
       {/* Main Content Area - Mounts the interactive client component */}
-      <div className="flex-grow w-full max-w-7xl mx-auto px-4 py-8">
+      <div className="flex-grow w-full">
         <HifzSession surahData={surahData} surahNumber={parseInt(id, 10)} />
       </div>
     </main>

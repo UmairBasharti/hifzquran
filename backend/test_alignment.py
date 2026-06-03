@@ -156,10 +156,38 @@ def test_short_word_intolerance_fixed():
     # A short word like "قل" (len 2 stripped) with 1 mistake "خل" should be accepted now,
     # because the dynamic threshold drops to 0.5 for words <= 3 characters (Bug F8).
     session = create_session(112, 1, 1, include_bismillah=False)
-    
+
     # "خل" vs "قل" -> edit distance 1. length 2. similarity = 1.0 - (1/2) = 0.5.
     res = process_transcription(session, "خل")
     assert len(res) == 1
     assert res[0]["status"] == "correct"
     assert res[0]["wordIndex"] == 4
     assert session.current_word_index == 1
+
+
+def test_backtracking_fixes_skipped_word():
+    # Surah 114 ayahs 1-2: قُل(4) أَعُوذُ(5) بِرَبِّ(6) ٱلنَّاسِ(7) مَلِكِ(8) ٱلنَّاسِ(9).
+    # The reciter skips بِرَبِّ, then goes BACK to re-recite it — it must turn correct again
+    # and the cursor must resume from just after it.
+    session = create_session(114, 1, 2, include_bismillah=False)
+    process_transcription(session, "قل اعوذ")        # positions 0,1 correct; cursor at بِرَبِّ
+    process_transcription(session, "الناس")            # بِرَبِّ (idx6) skipped, ٱلنَّاسِ (idx7) revealed
+    assert session.results[6]["status"] == "skipped"
+
+    results = process_transcription(session, "برب")     # reciter returns to fix بِرَبِّ
+    fixed = [result for result in results if result["wordIndex"] == 6]
+    assert len(fixed) == 1 and fixed[0]["status"] == "correct"
+    assert session.results[6]["status"] == "correct"
+    assert session.current_word_index == 3              # resumes just after the fixed word
+
+
+def test_forward_recitation_leaves_skipped_word_alone():
+    # If the reciter skips a word and simply keeps reciting forward (does NOT go back),
+    # backtracking must not fire: the skipped word stays skipped, untouched.
+    session = create_session(114, 1, 2, include_bismillah=False)
+    process_transcription(session, "قل اعوذ")        # cursor at بِرَبِّ
+    process_transcription(session, "الناس")            # بِرَبِّ skipped, cursor at مَلِكِ
+    results = process_transcription(session, "ملك الناس")  # continues forward into ayah 2
+    assert session.results[6]["status"] == "skipped"   # still skipped — never auto-corrected
+    assert session.is_complete
+    assert all(result["wordIndex"] in (8, 9) for result in results)

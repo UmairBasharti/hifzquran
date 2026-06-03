@@ -23,3 +23,52 @@ body {
 .font-uthmanic {
   font-family: var(--font-uthmanic);
 }
+
+/* Composable entrance animations — a self-hosted subset of tailwindcss-animate so we avoid the
+   extra plugin dependency. `animate-in` runs the shared keyframe; the modifier classes only set
+   CSS variables, so they compose (e.g. `animate-in fade-in slide-in-from-top-2`). These are
+   declared unlayered, so they reliably win over Tailwind's layered utilities of equal specificity. */
+.animate-in {
+  animation-name: hifz-enter;
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+  --hifz-enter-opacity: initial;
+  --hifz-enter-translate-y: initial;
+  --hifz-enter-scale: initial;
+}
+
+/* Start fully transparent and fade up to the element's natural opacity. */
+.fade-in {
+  --hifz-enter-opacity: 0;
+}
+
+/* Start nudged 0.5rem above final position (Tailwind's "-2" spacing step) and slide down. */
+.slide-in-from-top-2 {
+  --hifz-enter-translate-y: -0.5rem;
+}
+
+/* Start at 95% scale and zoom up to full size. */
+.zoom-in-95 {
+  --hifz-enter-scale: 0.95;
+}
+
+/* When `duration-300` is paired with `animate-in`, drive the animation length (not just transitions). */
+.animate-in.duration-300 {
+  animation-duration: 300ms;
+}
+
+@keyframes hifz-enter {
+  from {
+    opacity: var(--hifz-enter-opacity, 1);
+    transform: translate3d(0, var(--hifz-enter-translate-y, 0), 0) scale(var(--hifz-enter-scale, 1));
+  }
+}
+
+/* Keep the fixed bottom controls clear of the iOS home indicator. The footer already has py-4
+   (1rem), so we add the device safe-area inset on top of it rather than replacing it — on
+   non-notch devices env() resolves to 0, preserving the exact current spacing. Requires
+   viewport-fit=cover (set in layout.js) for the inset to be non-zero on iOS. */
+.pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}

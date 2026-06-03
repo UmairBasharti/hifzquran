@@ -26,3 +26,10 @@ Thumbs.db
 
 backend/.pytest_cache/
 backend/test.mp3
+
+# Test audio — real voice recordings + downloaded recitations; never commit (privacy + size).
+# The 5 original studio clips (108001.mp3 etc.) are fine to commit; all new additions are excluded.
+backend/tests/data/fatiha.m4a
+backend/tests/data/wrong recite.m4a
+backend/tests/data/recite_*.mp3
+backend/tests/data/recite_*.m4a

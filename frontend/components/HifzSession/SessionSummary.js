@@ -21,12 +21,15 @@ const ERROR_TIPS = {
   pronunciation_error: "The pronunciation was unclear or incorrect.",
 };
 
+
+
 export default function SessionSummary({
   surahNumber,
   startAyah,
   endAyah,
   summaryData,
   wordResults = [],
+  onResumeSession,
 }) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -35,21 +38,23 @@ export default function SessionSummary({
   const playingAudioRef = useRef(null);
   const [playingWordIdx, setPlayingWordIdx] = useState(null);
 
-  const playAudio = (url, idx) => {
+  const playAudio = async (url, idx) => {
     if (playingAudioRef.current) {
       playingAudioRef.current.pause();
     }
     if (!url) return;
-    
+
     setPlayingWordIdx(idx);
     const audio = new Audio(url);
     playingAudioRef.current = audio;
-    
+
     audio.onended = () => setPlayingWordIdx(null);
-    audio.play().catch(err => {
-      console.error("Playback failed:", err);
+    try {
+      await audio.play();
+    } catch (playbackError) {
+      console.error("Playback failed:", playbackError);
       setPlayingWordIdx(null);
-    });
+    }
   };
 
   // Derive counts from the per-word results, which persist across reconnects — after a
@@ -102,8 +107,8 @@ export default function SessionSummary({
   };
 
   const pagesUsed = useMemo(() => {
-    const pageSet = new Set(wordResults.map((w) => w.page).filter(Boolean));
-    return Array.from(pageSet).sort((a, b) => a - b);
+    const pageSet = new Set(wordResults.map((word) => word.page).filter(Boolean));
+    return Array.from(pageSet).sort((firstPage, secondPage) => firstPage - secondPage);
   }, [wordResults]);
 
   const fontFaceCss = useMemo(
@@ -184,13 +189,18 @@ export default function SessionSummary({
                 const hasGlyph = Boolean(word.codeV1 && word.page);
 
                 return (
-                  <div key={idx} className="flex flex-col items-center">
+                  <div key={idx} className="flex flex-col items-center gap-1.5">
                     <span
                       className={`text-2xl md:text-3xl leading-none ${colorClass} ${hasGlyph ? "" : "font-uthmanic"}`}
                       style={hasGlyph ? { fontFamily: `qcf-p${word.page}` } : undefined}
                     >
                       {hasGlyph ? word.codeV1 : word.text}
                     </span>
+                    {/* Non-color status cue (icon shape + label) so correct/wrong/skipped are
+                        distinguishable for colorblind users and screen readers, not by colour alone. */}
+                    {word.status === "correct" && <CheckCircle className="w-3.5 h-3.5 text-emerald-600" aria-label="Correct" />}
+                    {word.status === "wrong" && <XCircle className="w-3.5 h-3.5 text-red-500" aria-label="Mistake" />}
+                    {word.status === "skipped" && <SkipForward className="w-3.5 h-3.5 text-amber-500" aria-label="Skipped" />}
                   </div>
                 );
               })}
@@ -203,7 +213,7 @@ export default function SessionSummary({
           <div className="w-full mb-10 pt-8 flex flex-col items-center">
             <h3 className="text-lg font-bold text-gray-900 mb-6 text-center">Detailed Mistakes & Skips</h3>
             <div className="w-full flex flex-col gap-6">
-              {wordResults.filter(w => w.status === "wrong" || w.status === "skipped").map((word, idx) => {
+              {wordResults.filter((word) => word.status === "wrong" || word.status === "skipped").map((word, idx) => {
                 const hasGlyph = Boolean(word.codeV1 && word.page);
                 const isSkipped = word.status === "skipped";
                 const title = isSkipped ? "Skipped Word" : (ERROR_LABELS[word.errorType] || "Pronunciation Error");
@@ -282,6 +292,8 @@ export default function SessionSummary({
           </div>
         )}
 
+
+
         {/* Actions */}
         <div className="w-full flex flex-col sm:flex-row gap-3">
           <button 
@@ -289,8 +301,17 @@ export default function SessionSummary({
             className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full font-semibold transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Discard
+            Home
           </button>
+          
+          {onResumeSession && (
+            <button 
+              onClick={onResumeSession}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full font-semibold transition-colors"
+            >
+              Back to Session
+            </button>
+          )}
           
           <button 
             onClick={handleSave}

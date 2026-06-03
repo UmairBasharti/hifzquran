@@ -13,10 +13,10 @@ DEFAULT_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://hifzai.co
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", DEFAULT_ORIGINS)
 ALLOWED_ORIGINS = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
 
-# Temporary, privacy-safe pipeline diagnostics — logs chunk SIZES, signal PEAK, and the
-# transcribed TEXT only (never raw audio). Set DEBUG_ASR=0 to silence. Remove once the
-# live browser→reveal path is confirmed.
-DEBUG_ASR = os.getenv("DEBUG_ASR", "1") == "1"
+# Privacy-safe pipeline diagnostics — logs chunk SIZES, signal PEAK, and the transcribed TEXT
+# only (never raw audio). OFF by default so production never logs recitation text every chunk;
+# set DEBUG_ASR=1 in local dev to switch it on.
+DEBUG_ASR = os.getenv("DEBUG_ASR", "0") == "1"
 
 # Limit concurrent WebSocket sessions to prevent GPU/CPU Out-Of-Memory (OOM) if 
 # users spam the Start button or traffic spikes.

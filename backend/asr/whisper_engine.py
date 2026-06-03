@@ -16,9 +16,12 @@ if os.name == 'nt':
 import numpy as np
 from faster_whisper import WhisperModel
 
+import threading
+
 # Global singleton to hold the loaded model
 whisper_model = None
 MODEL_LOADED = False
+model_lock = threading.Lock()
 # Beam width is chosen by device: a GPU can afford accurate beam search (5) at near-zero latency,
 # while on CPU greedy (1) keeps each chunk fast. Set in load_model once the device is known.
 whisper_beam_size = 1
@@ -93,36 +96,48 @@ def transcribe_audio_chunk(audio_float32: np.ndarray, expected_text: str = "") -
     # 1. Normalize amplitude for quiet whisper support
     normalized_audio = normalize_audio_amplitude(audio_float32)
 
-    # 2. Run transcription with strict constraints
-    # VAD filter removes noise/silence before inference.
-    # min_silence_duration_ms=800 prevents the VAD from aggressively cutting mid-word pauses.
-    # beam_size=1 (greedy) is ~2x faster than beam 5 on CPU with no real accuracy
-    # loss here because initial_prompt already constrains the vocabulary to this Ayah.
-    # condition_on_previous_text=False avoids cross-chunk drift and is faster.
-    segments, info = whisper_model.transcribe(
-        normalized_audio,
-        language="ar",
-        beam_size=whisper_beam_size,
-        initial_prompt=expected_text,
-        condition_on_previous_text=False,
-        vad_filter=True,
-        vad_parameters={
-            "min_silence_duration_ms": 800,
-            "speech_pad_ms": 200,
-            "threshold": 0.4
-        },
-        no_speech_threshold=0.45,
-        log_prob_threshold=-1.0,
-        compression_ratio_threshold=2.4
-    )
+    # 2. Transcribe. CRITICAL: we deliberately do NOT pass initial_prompt anymore. Feeding the
+    # expected ayah made Whisper parrot it back from silence/noise, so words turned green before
+    # the user recited. The model is already Quran-fine-tuned, so it recognises the vocabulary
+    # without that crutch. condition_on_previous_text=False avoids cross-chunk drift; VAD +
+    # no_speech_threshold filter out silence. (expected_text is kept in the signature for the
+    # caller but no longer biases decoding.)
+    with model_lock:
+        segments, info = whisper_model.transcribe(
+            normalized_audio,
+            language="ar",
+            beam_size=whisper_beam_size,
+            condition_on_previous_text=False,
+            vad_filter=True,
+            vad_parameters={
+                "min_silence_duration_ms": 800,
+                "speech_pad_ms": 200,
+                "threshold": 0.4
+            },
+            no_speech_threshold=0.3,
+            log_prob_threshold=-1.0,
+            compression_ratio_threshold=2.4
+        )
 
-    # Note: segments is a generator. We must iterate it to perform inference.
-    transcribed_segments = list(segments)
-    
+        # segments is a generator — iterate it inside the lock to actually run inference.
+        transcribed_segments = list(segments)
+
     if not transcribed_segments:
         return ("", False)
 
-    # 3. Join segment texts
-    full_text = " ".join([seg.text for seg in transcribed_segments])
-    
-    return (full_text.strip(), True)
+    # 3. Drop segments Whisper itself flags as non-speech (a hallucination guard), then join the
+    # rest. We rely on prompt-removal + the alignment engine (which only advances on words that
+    # match the expected ayah) to ignore any stray/continuation words — so we do NOT need the
+    # costly per-word timestamp pass, which was the main thing making each chunk slow.
+    real_speech_segments = [
+        segment for segment in transcribed_segments
+        if segment.no_speech_prob < 0.6
+    ]
+    if not real_speech_segments:
+        return ("", False)
+
+    full_text = " ".join(segment.text for segment in real_speech_segments).strip()
+    if not full_text:
+        return ("", False)
+
+    return (full_text, True)

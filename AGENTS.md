@@ -181,20 +181,20 @@ const audioContext = new AudioContext()
 Do not send MP3, Opus, or WebM audio over the WebSocket.
 Send raw Float32 PCM binary data directly — no encoding/decoding overhead.
 
-### Rule: Use Sliding Window With 50% Overlap — Never Hard Fixed Cuts
+### Rule: Use Sliding Window With Overlap — Never Hard Fixed Cuts
 
 Fixed 2-3 second hard cuts will slice words at boundaries and cause false
 errors. Use a sliding window instead:
-- Window size: 3 seconds of audio
-- Step size: 1.5 seconds (50% overlap — new chunk every 1.5 seconds)
-- Each chunk contains the last 1.5 seconds of the previous chunk
+- Window size: 6 seconds of audio
+- Step size: 0.8 seconds (overlapping updates)
+- Each chunk contains the last 5.2 seconds of the previous chunk
 - The alignment engine deduplicates results from overlapping windows
 
 ```
-Time: 0s         1.5s        3s          4.5s        6s
-Chunk 1: [==========|==========]
-Chunk 2:           [==========|==========]
-Chunk 3:                      [==========|==========]
+Time: 0s       0.8s      1.6s        2.4s
+Chunk 1: [========================]
+Chunk 2:         [========================]
+Chunk 3:                 [========================]
 ```
 
 ### Rule: Use Constrained Decoding With initial_prompt
@@ -385,11 +385,20 @@ hifzai/
 - [ ] Basic tajweed error classification in feedback
 - [ ] Repeat Until Correct — session holds on wrong word until corrected or skipped
 - [ ] Session summary with word-by-word breakdown
-- [ ] Per-Surah offline mode (IndexedDB cache)
+- [ ] Three session modes — Listen / Read / Memorize (Hifz)
+- [ ] Listen mode — recitation audio playback with word-by-word highlight and **reciter (qari)
+      selection (multiple qaris)**. This is audio *playback* only and does not change the ASR:
+      recitation-checking remains Hafs 'an 'Asim only (see §1). Word timings + audio come from
+      api.quran.com at request time (audio is not Quran text, so it is exempt from the
+      "no runtime Quran fetch" rule).
 
 ## POST-MVP — DO NOT BUILD YET
 - User accounts / auth / dashboard / history
-- Mobile app / multiple reciters / multilingual UI
+- Mobile app / multilingual UI
+- Per-Surah offline mode (IndexedDB cache) — DEFERRED. The core Hifz loop depends on the live
+  ASR WebSocket to the Python backend, so true offline recitation-checking is impossible without
+  on-device ASR. An IndexedDB/Cache-API store of the surah JSON + QCF page fonts would only enable
+  offline *reading*, not Hifz. Revisit only when on-device/WASM ASR is on the table.
 
 ---
 
@@ -432,7 +441,7 @@ Phase 5: Full Quran        — ONLY after all 4 above pass correctly
 | Catch messages | console.error(e) | Specific descriptive message |
 | ASR model | Any other model | tarteel-ai/whisper-base-ar-quran |
 | Audio format | 44.1kHz stereo compressed | 16kHz mono Float32 PCM |
-| Audio chunking | Fixed hard cuts | 3s sliding window 1.5s step |
+| Audio chunking | Fixed hard cuts | 6s sliding window 0.8s step |
 | Decoding | Open transcription | Constrained with initial_prompt |
 | VAD params | Default faster-whisper params | Quran-tuned (silence 800ms) |
 | Arabic comparison | Raw string equality | Two-stage: strip then normalize |

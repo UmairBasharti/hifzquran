@@ -37,7 +37,6 @@ export default function SurahSelector() {
           placeholder="What do you want to memorize? (e.g. Yaseen, 36, يس)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          autoFocus
         />
       </div>
 

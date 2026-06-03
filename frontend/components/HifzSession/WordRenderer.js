@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { surahMeanings } from "../../lib/surah_meanings";
 
 // Renders the Surah in the authentic Madani-Mushaf layout using Quran.com's QCF v1
@@ -14,11 +14,17 @@ export default function WordRenderer({
   results,
   sessionMode = "hifz",
   isRecording = false,
+  isListenActive = false,
+  listenCursorIndex = null,
   sessionWordIndices,
+  startAyah,
+  endAyah,
+  includeBismillah,
+  onWordClick,
 }) {
 
-  // Every Mushaf page used by this Surah — so we can declare its @font-face once.
-  const pagesUsed = useMemo(() => collectPages(surahData), [surahData]);
+  // Every Mushaf page used by this Surah range — so we can declare its @font-face once.
+  const pagesUsed = useMemo(() => collectPages(surahData, startAyah, endAyah, includeBismillah), [surahData, startAyah, endAyah, includeBismillah]);
 
   // One @font-face per page, served same-origin so it can never be blocked.
   const fontFaceCss = useMemo(
@@ -33,7 +39,7 @@ export default function WordRenderer({
   );
 
   // Group the ayah words + end markers into the exact Mushaf lines (page + line).
-  const mushafLines = useMemo(() => groupIntoMushafLines(surahData), [surahData]);
+  const mushafLines = useMemo(() => groupIntoMushafLines(surahData, startAyah, endAyah, includeBismillah), [surahData, startAyah, endAyah, includeBismillah]);
 
   if (!surahData) return null;
 
@@ -60,7 +66,7 @@ export default function WordRenderer({
       </div>
 
       {/* Bismillah (rendered with its page-1 glyphs) */}
-      {surahData.bismillah && (
+      {includeBismillah && surahData.bismillah && (
         <div className="flex flex-wrap justify-center items-center gap-x-1 mb-10" dir="rtl" lang="ar">
           {surahData.bismillah.words.map((word) => (
             <WordGlyph
@@ -70,7 +76,10 @@ export default function WordRenderer({
               currentWordIndex={currentWordIndex}
               sessionMode={sessionMode}
               isRecording={isRecording}
+              isListenActive={isListenActive}
+              listenCursorIndex={listenCursorIndex}
               sessionWordIndices={sessionWordIndices}
+              onWordClick={onWordClick}
               bismillah
             />
           ))}
@@ -100,7 +109,10 @@ export default function WordRenderer({
                     currentWordIndex={currentWordIndex}
                     sessionMode={sessionMode}
                     isRecording={isRecording}
+                    isListenActive={isListenActive}
+                    listenCursorIndex={listenCursorIndex}
                     sessionWordIndices={sessionWordIndices}
+                    onWordClick={onWordClick}
                   />
                 )
               )}
@@ -113,25 +125,27 @@ export default function WordRenderer({
 }
 
 // Gather the set of Mushaf pages used across bismillah, words, and end markers.
-function collectPages(surahData) {
+function collectPages(surahData, startAyah, endAyah, includeBismillah) {
   if (!surahData) return [];
   const pageSet = new Set();
   const add = (page) => {
     if (page) pageSet.add(page);
   };
-  if (surahData.bismillah) {
+  if (includeBismillah && surahData.bismillah) {
     surahData.bismillah.words.forEach((word) => add(word.page));
   }
   surahData.ayahs.forEach((ayah) => {
-    ayah.words.forEach((word) => add(word.page));
-    if (ayah.end) add(ayah.end.page);
+    if (ayah.ayahNumber >= startAyah && ayah.ayahNumber <= endAyah) {
+      ayah.words.forEach((word) => add(word.page));
+      if (ayah.end) add(ayah.end.page);
+    }
   });
   return Array.from(pageSet).sort((first, second) => first - second);
 }
 
 // Walk all ayah words (and their end markers) and split them into Mushaf lines,
 // starting a new line whenever the page or line number changes.
-function groupIntoMushafLines(surahData) {
+function groupIntoMushafLines(surahData, startAyah, endAyah, includeBismillah) {
   if (!surahData) return [];
   const lines = [];
   let currentLine = null;
@@ -146,17 +160,19 @@ function groupIntoMushafLines(surahData) {
   };
 
   surahData.ayahs.forEach((ayah) => {
-    ayah.words.forEach((word) => {
-      appendToken({ type: "word", word, page: word.page, line: word.line });
-    });
-    if (ayah.end) {
-      appendToken({
-        type: "end",
-        ayahNumber: ayah.ayahNumber,
-        codeV1: ayah.end.codeV1,
-        page: ayah.end.page,
-        line: ayah.end.line,
+    if (ayah.ayahNumber >= startAyah && ayah.ayahNumber <= endAyah) {
+      ayah.words.forEach((word) => {
+        appendToken({ type: "word", word, page: word.page, line: word.line });
       });
+      if (ayah.end) {
+        appendToken({
+          type: "end",
+          ayahNumber: ayah.ayahNumber,
+          codeV1: ayah.end.codeV1,
+          page: ayah.end.page,
+          line: ayah.end.line,
+        });
+      }
     }
   });
 
@@ -164,12 +180,26 @@ function groupIntoMushafLines(surahData) {
 }
 
 // A single recitable word, drawn as its QCF page glyph (or text fallback).
-function WordGlyph({ word, results, currentWordIndex, sessionMode, isRecording, bismillah, sessionWordIndices }) {
+function WordGlyph({ word, results, currentWordIndex, sessionMode, isRecording, isListenActive, listenCursorIndex, bismillah, sessionWordIndices, onWordClick }) {
+  const wordRef = useRef(null);
+
   const result = results[word.index];
   // Words outside the selected range are never hidden — only session words react to hifz mode.
   const inSession = !sessionWordIndices || sessionWordIndices.has(word.index);
-  const isActive = isRecording && inSession && word.index === currentWordIndex && !result;
+
+  // isActive fires both when recording (recitation cursor) and when listening (audio sync cursor).
+  const isActive = (
+    (isRecording && inSession && word.index === currentWordIndex && !result) ||
+    (isListenActive && word.index === listenCursorIndex)
+  );
   const isHidden = isRecording && sessionMode === "hifz" && inSession && !result && word.index >= currentWordIndex;
+
+  // Keep the active word in view — for the recitation cursor AND the listen-mode playback cursor.
+  useEffect(() => {
+    if (isActive && (isRecording || isListenActive) && wordRef.current) {
+      wordRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isActive, isRecording, isListenActive]);
 
   let colorClass = "text-gray-900";
   if (result) {
@@ -183,8 +213,28 @@ function WordGlyph({ word, results, currentWordIndex, sessionMode, isRecording, 
   const hasGlyph = Boolean(word.codeV1 && word.page);
   const sizeClass = bismillah ? "text-xl md:text-2xl" : "text-2xl md:text-[2rem]";
 
+  // In Listen mode each word is a control that seeks playback to itself — make it keyboard
+  // operable (focusable + Enter/Space), not only mouse-clickable.
+  const isSeekable = Boolean(onWordClick) && sessionMode === "listen";
+  const seekToThisWord = () => {
+    if (isSeekable) onWordClick(word.index);
+  };
+
   return (
-    <span className="relative inline-block">
+    <span
+      ref={wordRef}
+      className={`relative inline-block ${isSeekable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+      onClick={seekToThisWord}
+      role={isSeekable ? "button" : undefined}
+      tabIndex={isSeekable ? 0 : undefined}
+      aria-label={isSeekable ? "Play recitation from this word" : undefined}
+      onKeyDown={isSeekable ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          seekToThisWord();
+        }
+      } : undefined}
+    >
       <span
         className={`${sizeClass} leading-none ${colorClass} ${isHidden ? "invisible" : "visible"} ${
           hasGlyph ? "" : "font-uthmanic"
@@ -193,7 +243,8 @@ function WordGlyph({ word, results, currentWordIndex, sessionMode, isRecording, 
       >
         {hasGlyph ? word.codeV1 : word.text}
       </span>
-      {isActive && (
+      {/* Active-word cursor: solid teal underline while the reciter is on this word. */}
+      {isActive && isRecording && (
         <span className="absolute left-0 right-0 -bottom-1 h-[3px] rounded-full bg-[#2ca4ab] animate-pulse" />
       )}
     </span>

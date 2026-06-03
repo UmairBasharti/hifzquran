@@ -22,7 +22,7 @@
 |                                                               |
 |  AUDIO PIPELINE (browser side — critical):                    |
 |  Mic → AudioContext({ sampleRate: 16000 }) → mono Float32    |
-|      → 3s sliding window, 1.5s step (50% overlap)            |
+|      → 6s sliding window, 0.8s step                          |
 |      → binary WebSocket → Python backend                      |
 |                                                               |
 |  +-----------------+  +------------------+  +--------------+  |
@@ -101,14 +101,14 @@ Step 2: Open mic stream — mono, 16kHz, echo cancellation on
 Step 3: Connect mic to ScriptProcessor or AudioWorklet node
   → Accumulate Float32 samples into a rolling buffer
 
-Step 4: Sliding window — every 1.5 seconds:
-  → Take last 3 seconds of buffer (= 3s window, 1.5s step, 50% overlap)
+Step 4: Sliding window — every 0.8 seconds:
+  → Take last 6 seconds of buffer (overlapping updates)
   → Send as raw Float32Array binary over WebSocket
 
-  Time: 0s    1.5s    3s     4.5s    6s
-  C1:   [==========]
-  C2:          [==========]
-  C3:                 [==========]
+  Time: 0s       0.8s      1.6s        2.4s
+  C1:   [========================]
+  C2:           [========================]
+  C3:                   [========================]
 ```
 
 **Why 16kHz**: Whisper is trained on 16kHz. Sending 44.1kHz causes silent accuracy loss.
@@ -219,7 +219,7 @@ components/AyahDisplay/AyahDisplay.js
 
 components/HifzMode/HifzMode.js
   → owns: AudioContext({ sampleRate: 16000 }), WebSocket connection
-  → owns: sliding window buffer (3s window, 1.5s step)
+  → owns: sliding window buffer (6s window, 0.8s step)
   → sends: Float32Array binary chunks over WebSocket
   → receives: word result JSON from Python
   → calls: onWordResult(result) callback to update parent state

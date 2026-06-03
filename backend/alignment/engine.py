@@ -1,4 +1,5 @@
 import Levenshtein
+import os
 import time
 from quran.loader import get_word_list
 from quran.normalization import normalize_for_match, normalize_for_match_alef
@@ -21,6 +22,10 @@ MAX_LOCAL_SKIP = 2
 # advancing past it — a conservative "you're stuck on this word" signal that doesn't fire too fast
 # when the GPU does back-to-back inferences in <1s.
 STUCK_TIME_SECONDS = 2.5
+# How far back the reciter may jump to fix an earlier wrong/skipped word. Bounded so a coincidental
+# match to a far-back repeated word can never yank the cursor backwards across the passage.
+BACKWARD_LOOKBACK = 5
+
 
 
 class HifzSession:
@@ -82,15 +87,17 @@ def _word_similarity(word, spoken_norm):
     return max(_similarity(form, spoken_norm) for form in _word_match_forms(word))
 
 
-# Normalized forms of recently confirmed words, used to ignore overlapping-window echoes.
-# We limit the lookback to the last 3-4 words (the size of a sliding window overlap) to
-# avoid suppressing legitimate repeated words further down the Surah.
+# Normalized forms of recently CONFIRMED-CORRECT words, used to ignore overlapping-window echoes.
+# We limit the lookback to the last 3-4 words (the size of a sliding window overlap) to avoid
+# suppressing legitimate repeated words further down the Surah. Only "correct" words are included:
+# a recently wrong/skipped word must stay re-matchable so the reciter can go back and fix it.
 def _confirmed_word_forms(session):
     confirmed = set()
     start_position = max(0, session.current_word_index - 4)
     for position in range(start_position, session.current_word_index):
         word = session.words[position]
-        if word["index"] <= session.last_confirmed_word_index:
+        existing = session.results.get(word["index"])
+        if existing and existing["status"] == "correct":
             confirmed.update(_word_match_forms(word))
     return confirmed
 
@@ -107,6 +114,39 @@ def _find_near_match(session, spoken_norm, max_skip, threshold):
     return -1
 
 
+# The reciter may go back to re-recite an earlier word they got wrong or skipped. Find the nearest
+# such word within a short BACKWARD window that the token strongly matches, or -1. High threshold +
+# bounded lookback so a coincidental match can't drag the cursor backwards across the passage.
+def _find_backward_correction(session, spoken_norm, max_lookback, threshold):
+    start = session.current_word_index - 1
+    end = max(0, session.current_word_index - max_lookback)
+    for position in range(start, end - 1, -1):
+        word = session.words[position]
+        existing = session.results.get(word["index"])
+        if existing and existing["status"] in ("wrong", "skipped"):
+            if _word_similarity(word, spoken_norm) >= threshold:
+                return position
+    return -1
+
+
+# Re-mark a previously wrong/skipped word correct (the reciter went back to fix it) and move the
+# cursor to just after it, so recitation naturally continues forward from that point.
+def _correct_backward(session, position, spoken_token, new_results):
+    word = session.words[position]
+    result = {
+        "type": "wordResult",
+        "wordIndex": word["index"],
+        "status": "correct",
+        "word": word["text"],
+        "spoken": spoken_token,
+    }
+    session.results[word["index"]] = result
+    new_results.append(result)
+    session.current_word_index = position + 1
+    session.last_confirmed_word_index = max(session.last_confirmed_word_index, word["index"])
+    session.stuck_since = None
+
+
 # Mark the current word correct, advance the cursor, and reset the stuck counter.
 def _reveal_correct(session, word, spoken_token, new_results):
     result = {
@@ -116,6 +156,7 @@ def _reveal_correct(session, word, spoken_token, new_results):
         "word": word["text"],
         "spoken": spoken_token,
     }
+
     session.results[word["index"]] = result
     new_results.append(result)
     session.last_confirmed_word_index = word["index"]
@@ -192,14 +233,14 @@ def _flag_current_wrong(session, new_results, transcribed_text):
 
 
 def process_transcription(session, transcribed_text, current_time=None):
-    if current_time is None:
-        current_time = time.time()
     """
     Fuzzy, monotonic, position-tracking alignment (Tarteel-style). Each recognized token is matched
     to a reference word by edit-similarity within a forward window; the cursor advances to the
     furthest confident match, missed words are marked skipped, and a word is only flagged wrong
     after the reciter is stuck on it for several chunks (never on a single noisy chunk).
     """
+    if current_time is None:
+        current_time = time.time()
     new_results = []
     if session.is_complete or not transcribed_text:
         return new_results
@@ -210,6 +251,7 @@ def process_transcription(session, transcribed_text, current_time=None):
     for spoken_token in transcribed_text.split():
         if session.current_word_index >= len(session.words):
             break
+
         spoken_norm = normalize_for_match(spoken_token)
         if len(spoken_norm) < 2:
             continue  # one-letter noise
@@ -235,6 +277,17 @@ def process_transcription(session, transcribed_text, current_time=None):
             revealed_word = session.words[session.current_word_index]
             _reveal_correct(session, revealed_word, spoken_token, new_results)
             confirmed_forms.update(_word_match_forms(revealed_word))
+            continue
+
+        # 2.5 Backtracking — the reciter went back to fix an earlier wrong/skipped word. This is
+        # only reached when the token matched NEITHER the current word NOR the next 1-2 ahead, so
+        # ordinary forward recitation never triggers it: if the reciter just keeps going, their
+        # words match forward and the skipped word is simply left as-is. It fires only on a real
+        # backward jump, re-marking that word correct and resuming the cursor from there.
+        backward_position = _find_backward_correction(session, spoken_norm, BACKWARD_LOOKBACK, SKIP_MATCH_THRESHOLD)
+        if backward_position != -1:
+            _correct_backward(session, backward_position, spoken_token, new_results)
+            confirmed_forms.update(_word_match_forms(session.words[backward_position]))
             continue
 
         # 3. Unmatched token — ASR noise or an unclear word. Ignore it (never churn a false error).

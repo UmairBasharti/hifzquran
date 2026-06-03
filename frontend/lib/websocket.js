@@ -21,14 +21,22 @@ export function openHifzSession({
   // like "ws://host:8000/ws" never becomes a broken "/ws/ws" path that 404s the handshake.
   let backendBase = process.env.NEXT_PUBLIC_PYTHON_BACKEND_WS;
   if (!backendBase) {
-    backendBase = `ws://${window.location.hostname}:8000`;
+    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    backendBase = `${protocol}${window.location.hostname}:8000`;
   }
   const normalizedBase = backendBase.replace(/\/+$/, "").replace(/\/ws$/, "");
   const socketUrl = `${normalizedBase}/ws`;
 
+  // Give up after this many consecutive failed reconnects so a permanently-down backend
+  // doesn't retry forever; back off a little more after each failure (capped at 15s).
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const RECONNECT_BASE_DELAY_MS = 3000;
+  const MAX_RECONNECT_DELAY_MS = 15000;
+
   let activeSocket = null;
   let isClosing = false;
   let reconnectTimer = null;
+  let reconnectAttempts = 0;
 
   // Opens a fresh socket and (re)starts the session from the current word position.
   function connect() {
@@ -38,6 +46,7 @@ export function openHifzSession({
 
     ws.onopen = () => {
       console.info("[ws] open — sending sessionStart");
+      reconnectAttempts = 0; // a clean open resets the reconnect budget
       const resumeFromWordIndex = getResumeIndex ? getResumeIndex() : 0;
       ws.send(
         JSON.stringify({
@@ -79,9 +88,21 @@ export function openHifzSession({
     ws.onclose = (event) => {
       console.warn(`[ws] closed code=${event.code} reason='${event.reason}' intentional=${isClosing}`);
       if (isClosing) return; // intentional shutdown (user stopped / session complete)
-      // Unexpected drop — tell the UI and retry in 3 seconds.
+
+      // Unexpected drop — retry with backoff, but stop after the budget is exhausted so we
+      // never spin forever against a backend that is down.
+      reconnectAttempts += 1;
+      if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+        console.error(`[ws] giving up after ${MAX_RECONNECT_ATTEMPTS} reconnect attempts`);
+        if (onError) {
+          onError({ message: "Connection lost — please check that the server is running and start the session again." });
+        }
+        return;
+      }
+
       if (onReconnecting) onReconnecting();
-      reconnectTimer = setTimeout(connect, 3000);
+      const reconnectDelayMs = Math.min(RECONNECT_BASE_DELAY_MS * reconnectAttempts, MAX_RECONNECT_DELAY_MS);
+      reconnectTimer = setTimeout(connect, reconnectDelayMs);
     };
   }
 

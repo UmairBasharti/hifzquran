@@ -16,7 +16,7 @@ export default function Home() {
           </div>
           
           <div className="flex items-center gap-4 text-sm font-medium text-gray-500">
-            <a href="https://github.com/UmairBasharti/hifzai" target="_blank" rel="noreferrer" className="hover:text-[#2ca4ab] transition-colors">
+            <a href="https://github.com/UmairBasharti/hifzquran" target="_blank" rel="noreferrer" className="hover:text-[#2ca4ab] transition-colors">
               About
             </a>
           </div>

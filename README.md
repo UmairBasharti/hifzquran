@@ -8,6 +8,16 @@ Built to replicate and improve on [Tarteel AI](https://tarteel.ai)'s core featur
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="HifzAI home page — search and select any of the 114 Surahs" width="68%">
+  &nbsp;
+  <img src="docs/screenshots/mobile.png" alt="HifzAI on mobile" width="22%">
+</p>
+
+---
+
 ## Features
 
 - **Surah search & selection** — all 114 Surahs, searchable by name, number, or Arabic
@@ -43,7 +53,7 @@ The browser captures mic audio at 16kHz mono, streams it via WebSocket to the Py
 ### Prerequisites
 
 - **Python 3.11+** (3.13 recommended)
-- **Node.js 18+**
+- **Node.js 20.9+** (required by Next.js 16)
 - **A microphone** (for Hifz mode)
 
 ### 1. Clone the repo
@@ -96,9 +106,16 @@ npm run dev
 
 Go to **[http://localhost:3000](http://localhost:3000)**, pick a Surah, and start reciting!
 
+> **Windows shortcut**: once the venv and `node_modules` are installed, you can run `.\start_backend.ps1` and `.\start_frontend.ps1` from the repo root (in two terminals) instead of steps 2–3.
+>
+> **Docker**: the backend also ships with a `Dockerfile` in `backend/`.
+
 ---
 
 ## Environment Variables
+
+Both apps work with the defaults below. To customize, copy the templates:
+`backend/.env.example` → `backend/.env` and `frontend/.env.example` → `frontend/.env.local`.
 
 ### Frontend (`frontend/.env.local`)
 
@@ -189,6 +206,8 @@ cd backend
 python -m pytest -x -v
 ```
 
+The ASR tests (`test_asr_golden.py`, `test_asr_silence.py`) load the Whisper model, so the first run downloads it.
+
 Test order follows the PRD — start with the shortest Surahs:
 1. Al-Kawthar (108 — 3 ayahs)
 2. Al-Ikhlas (112 — 4 ayahs)
@@ -205,4 +224,4 @@ Contributions are welcome! Please read [`AGENTS.md`](AGENTS.md) before making ch
 
 ## License
 
-MIT — fully open source. Built for the Ummah. 🕌
+[MIT](LICENSE) — fully open source. Built for the Ummah. 🕌

@@ -16,8 +16,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## 1. WHAT YOU ARE BUILDING
 
 You are helping build **HifzAI** — a free, open-source Quran memorization
-(Hifz) web application that replicates and improves on Tarteel AI's core
-feature set, designed to be integrated into Quran.com and gifted to the
+(Hifz) web application inspired by Tarteel AI's approach to recitation
+feedback, designed to be integrated into Quran.com and gifted to the
 global Muslim community at zero cost.
 
 ### The Core User Experience
@@ -27,13 +27,12 @@ All Arabic text immediately hides — only Ayah numbers remain visible.
 The system starts listening to the user's microphone. As the user recites
 from memory, each correct word is revealed on screen in real time. Wrong
 words, skipped words, and tashkeel errors are flagged instantly with color
-and labels — exactly like Tarteel AI, but completely free and open source.
+and labels — completely free and open source.
 
-### HifzAI Privacy Advantage Over Tarteel
-Tarteel AI stores user audio in the cloud every 20 seconds and uses it
-for model training. HifzAI processes audio in memory only and discards
-it immediately after transcription — no audio ever stored anywhere.
-This is a genuine competitive and ethical advantage. Never compromise it.
+### Privacy: Audio Is Never Stored
+HifzAI processes audio in memory only and discards it immediately after
+transcription — no audio is ever stored anywhere. This is a core
+principle. Never compromise it.
 
 ### Project Identity
 - **Name**: HifzAI

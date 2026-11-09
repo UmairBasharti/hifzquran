@@ -1,5 +1,5 @@
 -- HifzAI — Supabase schema (MVP)
--- Source of truth: docs/Database.md §2. Run this once in the Supabase SQL editor.
+-- Run this once in the Supabase SQL editor (see the README, "Optional: save finished sessions").
 -- Safe to re-run (idempotent guards added).
 --
 -- Stores ONE row per completed Hifz session. No user identity, no audio, no PII.

@@ -60,7 +60,7 @@ HifzAI runs on your own computer as **two programs side by side**: a Python **ba
 |---|---|---|---|
 | **Git** | any recent | [git-scm.com/downloads](https://git-scm.com/downloads) | `git --version` |
 | **Python** | 3.11 or newer (tested on 3.11 and 3.13) | [python.org/downloads](https://www.python.org/downloads/). On Windows, tick **"Add python.exe to PATH"** in the installer | `python --version` (Windows: `py --version`; macOS/Linux: `python3 --version`) |
-| **Node.js** | 20.9 or newer (the LTS version is fine) | [nodejs.org](https://nodejs.org) | `node --version` |
+| **Node.js** | 20.9 or newer (tested on Node 20 and 22; the LTS version is fine) | [nodejs.org](https://nodejs.org) | `node --version` |
 | A browser and a microphone | Chrome, Edge, Firefox or Safari | | |
 
 You also need an internet connection the first time: the backend downloads the Quran text (about 24 MB) and the speech model (about 150 MB), once.

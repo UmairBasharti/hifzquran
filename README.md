@@ -145,8 +145,6 @@ Two things worth knowing:
 You only repeat the start commands, not the installs. Terminal 1: `cd hifzquran/backend`, switch the environment on again (`.\venv\Scripts\Activate.ps1` or `source venv/bin/activate`), then `python -m uvicorn main:app --host 127.0.0.1 --port 8000`. Terminal 2: `cd hifzquran/frontend`, then `npm run dev`. Stop either one with **Ctrl+C**.
 
 > **Windows shortcut**: after step 2's one-time setup, `.\start_backend.ps1` and `.\start_frontend.ps1` (run from the `hifzquran` folder, one per terminal) do the same. They listen on all network interfaces.
->
-> **Docker**: the backend also ships a `Dockerfile` in `backend/`. It is written for NVIDIA GPU hosts such as Hugging Face Spaces, uses the CUDA image that faster-whisper documents, and has not been built or tested here.
 
 ### Troubleshooting
 

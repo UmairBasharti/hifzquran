@@ -325,7 +325,6 @@ hifzquran/
 └── backend/
     ├── .env.example                        (template — copy to .env)
     ├── .env                                (backend secrets — never commit)
-    ├── Dockerfile
     ├── main.py
     ├── websocket_handler.py                (WebSocket session + sliding window dispatch)
     ├── supabase_db.py                      (Optional Supabase client)
@@ -442,7 +441,6 @@ documentation; for details, read the code itself:
 | Database / Supabase | backend/db/schema.sql, backend/supabase_db.py |
 | Any UI component | frontend/components/ |
 | Arabic text / Quran data | backend/quran/loader.py, backend/quran/normalization.py |
-| Docker / deployment | backend/Dockerfile |
 | Audio handling / privacy | frontend/lib/audio.js, backend/asr/whisper_engine.py |
 
 ---

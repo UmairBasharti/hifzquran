@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # AGENTS.md — HifzAI Cross-Platform Agent Rules
 # Read by Antigravity IDE, Claude Code, Cursor, and any AGENTS.md-compatible agent.
-# This file is the source of truth. CLAUDE.md simply imports it (@AGENTS.md).
+# This file is the source of truth.
 # Read this file completely before taking any action in this project.
 # Every rule here is mandatory. None are optional or suggestions.
 # Last updated: 2026-06-04 — aligned with running codebase.
@@ -279,7 +279,6 @@ def classify_tajweed_error(expected_word, spoken_word):
 
 ```
 hifzquran/
-├── CLAUDE.md
 ├── AGENTS.md
 ├── README.md
 ├── .gitignore

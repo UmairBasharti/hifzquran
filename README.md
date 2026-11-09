@@ -86,7 +86,7 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 On first startup, the backend will:
 1. Download the Quran text from api.quran.com (~60-90s, one-time only)
-2. Download the Whisper model from HuggingFace (~500MB, one-time only)
+2. Download the Whisper model from HuggingFace (~150MB, one-time only)
 
 ### 3. Start the frontend
 
@@ -206,7 +206,7 @@ cd backend
 python -m pytest -x -v
 ```
 
-The ASR tests (`test_asr_golden.py`, `test_asr_silence.py`) load the Whisper model, so the first run downloads it.
+The first run needs an internet connection: it downloads the Quran text once (about a minute) if the server has not already done so, and the ASR tests (`test_asr_golden.py`, `test_asr_silence.py`) load the Whisper model, which is downloaded once as well. Later runs reuse both.
 
 Test order follows the PRD — start with the shortest Surahs:
 1. Al-Kawthar (108 — 3 ayahs)

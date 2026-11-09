@@ -10,7 +10,7 @@ export default function NotFound() {
       
       <h2 className="text-2xl font-bold text-gray-900 mb-2">Surah Not Found</h2>
       <p className="text-gray-500 mb-8 max-w-md">
-        We couldn't find the Surah you're looking for. It might be an invalid number or the URL is incorrect.
+        We couldn&apos;t find the Surah you&apos;re looking for. It might be an invalid number or the URL is incorrect.
       </p>
       
       <Link 

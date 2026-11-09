@@ -190,7 +190,7 @@ hifzquran/
 
 ## GPU Support
 
-The backend auto-detects CUDA GPUs. On a GPU, transcription runs in ~0.2s per chunk with beam search (5). On CPU, it uses int8 quantization and greedy decoding to stay responsive.
+The backend auto-detects CUDA GPUs. On a GPU, transcription runs in ~0.2s per chunk with beam search (5). On CPU, it uses int8 quantization and greedy decoding to stay responsive. Expect a delay of a few seconds before words appear on a CPU-only machine (the first word takes longer while the model warms up); a CUDA GPU is much faster.
 
 To force a specific device:
 

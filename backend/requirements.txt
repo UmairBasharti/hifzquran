@@ -1,6 +1,9 @@
 fastapi==0.124.4
 uvicorn[standard]
 faster-whisper==1.2.1
+# faster-whisper 1.2.1 only asks for av>=11, but still passes an option that PyAV 19 removed,
+# which breaks audio decoding on a fresh install. Keep av below 19 until faster-whisper is updated.
+av>=11,<19
 numpy
 python-dotenv
 supabase

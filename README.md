@@ -1,5 +1,7 @@
 # HifzAI — Free, Open-Source Quran Memorization
 
+[![CI](https://github.com/UmairBasharti/hifzquran/actions/workflows/ci.yml/badge.svg)](https://github.com/UmairBasharti/hifzquran/actions/workflows/ci.yml)
+
 **HifzAI** is a free, open-source Quran memorization (Hifz) web app that helps you test and strengthen your memorization in real time. Press the mic, recite from memory — HifzAI listens, hides the text, and reveals each word as you get it right, instantly flagging mistakes.
 
 Built to replicate and improve on [Tarteel AI](https://tarteel.ai)'s core feature set, designed to be gifted to the global Muslim community at zero cost.

@@ -10,30 +10,49 @@ Inspired by [Tarteel AI](https://tarteel.ai)'s approach to recitation feedback, 
 
 ---
 
-## Screenshots
+[Architecture](docs/ARCHITECTURE.md) · [API reference](docs/API.md) · [Database](docs/DATABASE.md) · [Security](SECURITY.md) · [Run it yourself](#getting-started-from-zero)
 
 <p align="center">
-  <img src="docs/screenshots/01-home.webp" alt="HifzAI home page: search and select any of the 114 Surahs" width="100%">
+  <img src="docs/screenshots/01-home.webp" alt="HifzAI home page with the headline Memorize the Quran, a search box and the surah list" width="860">
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/03-session-ready.webp" alt="Memorize mode, ready to recite: pick an ayah range and press Start Reciting" width="49%">
-  <img src="docs/screenshots/04-session-live.webp" alt="Mid-recitation: correct words in green, a mistake in red, a skipped word in orange" width="49%">
-</p>
+| At a glance | |
+|---|---|
+| **What** | A free web app for memorizing the Quran: recite from memory and get word-by-word feedback |
+| **For** | Anyone doing Hifz who wants instant feedback without a paid app or an account |
+| **Status** | Open source and runs on your own computer; there is no hosted service |
+| **Stack** | Next.js 16, React 19, Tailwind CSS 4, Python FastAPI, faster-whisper (a Quran fine-tuned Whisper model), WebSocket, Supabase (optional) |
+| **Checks** | CI on every push: frontend lint and build on Node 20 and 22, backend tests on Python 3.11 and 3.13 |
 
-<p align="center">
-  <img src="docs/screenshots/05-summary.webp" alt="Session summary with accuracy and correct, mistake and skipped counts" width="49%">
-  <img src="docs/screenshots/06-summary-breakdown.webp" alt="Word-by-word breakdown with a fix-it note for each mistake" width="49%">
-</p>
+---
 
-<p align="center">
-  <img src="docs/screenshots/m01-home.webp" alt="Home on a phone" width="23%">
-  <img src="docs/screenshots/m03-session-ready.webp" alt="Memorize mode on a phone" width="23%">
-  <img src="docs/screenshots/m04-session-live.webp" alt="Live feedback on a phone" width="23%">
-  <img src="docs/screenshots/m05-summary.webp" alt="Session summary on a phone" width="23%">
-</p>
+## How it works
 
-> The live-session and summary screenshots show a **scripted** recitation (one wrong word, one skipped word), captured without a microphone or the speech model, so the layout is the real interface but the recognition result is made up. The Quran text is the real data the backend serves.
+<table>
+<tr>
+<td width="33%"><img src="docs/screenshots/01-home.webp" alt="Home page listing the surahs with their Arabic names and ayah counts"><br><sub><b>1. Pick a surah.</b> All 114 are listed with their Arabic names and ayah counts.</sub></td>
+<td width="33%"><img src="docs/screenshots/02-search.webp" alt="Search box with yaseen typed and Ya-Sin as the only result"><br><sub><b>2. Or search for it.</b> By name, number or Arabic. Typing "yaseen" finds Ya-Sin.</sub></td>
+<td width="33%"><img src="docs/screenshots/03-session-ready.webp" alt="Memorize mode for Al-Fatihah with an ayah range picker and a Start Reciting button"><br><sub><b>3. Choose a range and start.</b> Pick the ayahs to practise, then press Start Reciting.</sub></td>
+</tr>
+<tr>
+<td width="33%"><img src="docs/screenshots/04-session-live.webp" alt="Mid-recitation: correct words in green, one mistake in red and one skipped word in amber"><br><sub><b>4. Recite.</b> Words appear as you say them: green when correct, red for a mistake, amber if skipped.</sub></td>
+<td width="33%"><img src="docs/screenshots/05-summary.webp" alt="Session Complete screen with 93.1 percent accuracy, 27 correct, 1 mistake and 1 skipped"><br><sub><b>5. See how you did.</b> Accuracy, plus the number of correct, mistaken and skipped words.</sub></td>
+<td width="33%"><img src="docs/screenshots/06-summary-breakdown.webp" alt="Word-by-word breakdown with the correct word, what was heard and a how-to-fix-it note"><br><sub><b>6. Fix what you missed.</b> Each mistake shows the correct word, what was heard and a short "how to fix it" note.</sub></td>
+</tr>
+</table>
+
+## On a phone
+
+<table>
+<tr>
+<td width="25%"><img src="docs/screenshots/m01-home.webp" alt="Home page on a phone"><br><sub>Choose a surah.</sub></td>
+<td width="25%"><img src="docs/screenshots/m03-session-ready.webp" alt="Memorize mode on a phone"><br><sub>Get ready to recite.</sub></td>
+<td width="25%"><img src="docs/screenshots/m04-session-live.webp" alt="Live feedback on a phone"><br><sub>Live feedback.</sub></td>
+<td width="25%"><img src="docs/screenshots/m05-summary.webp" alt="Session summary on a phone"><br><sub>The result.</sub></td>
+</tr>
+</table>
+
+> The live-session and summary screenshots show a **scripted** recitation (one wrong word, one skipped word), captured without a microphone or the speech model. The layout is the real interface and the Quran text is the real data, but the recognition result is made up for the picture.
 
 ---
 
@@ -64,6 +83,8 @@ HifzAI has **two separate processes** that run side by side:
 | **Backend** | Python FastAPI | 8000 | ASR (faster-whisper), alignment, tajweed |
 
 The browser captures mic audio at 16kHz mono, streams it via WebSocket to the Python backend, which runs a Quran-fine-tuned Whisper model and returns word-by-word results in real time.
+
+The full pipeline, the rules the alignment engine uses and the reasons behind them are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Every endpoint and WebSocket message is in [docs/API.md](docs/API.md).
 
 ---
 
@@ -245,6 +266,8 @@ This is the only place in the project that uses keys. After a session, **Save Se
 
 ```
 hifzquran/
+├── docs/                          # Architecture, API reference, database notes, screenshots
+├── SECURITY.md                    # Privacy model, protections and known limits
 ├── frontend/                      # Next.js 16 (App Router, JavaScript only)
 │   ├── app/
 │   │   ├── page.js                # Home — Surah search & selection
@@ -309,7 +332,7 @@ python -m pytest -x -v
 
 The first run needs an internet connection: it downloads the Quran text once (about a minute) if the server has not already done so, and the ASR tests (`test_asr_golden.py`, `test_asr_silence.py`) load the Whisper model, which is downloaded once as well. Later runs reuse both.
 
-Test order follows the PRD — start with the shortest Surahs:
+Short surahs are the quickest way to try the app by hand:
 1. Al-Kawthar (108 — 3 ayahs)
 2. Al-Ikhlas (112 — 4 ayahs)
 3. Al-Falaq (113 — 5 ayahs)

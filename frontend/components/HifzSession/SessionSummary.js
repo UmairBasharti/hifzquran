@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, SkipForward, Save, ArrowLeft, Loader2, Volume2 } from "lucide-react";
 
-// Human-readable labels for the backend tajweed error types (API.md §errorType).
+// Human-readable labels for the backend tajweed error types (docs/API.md, wordResult errorType).
 const ERROR_LABELS = {
   missing_shadda: "Missing shadda",
   wrong_harakat: "Wrong vowel",
@@ -71,7 +71,7 @@ export default function SessionSummary({
     setIsSaving(true);
     try {
       // Proxy to our Next.js API route which forwards to the Python backend.
-      // Body shape must match API.md §POST /session exactly.
+      // Body shape must match docs/API.md (POST /session) exactly.
       const res = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

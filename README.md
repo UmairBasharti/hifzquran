@@ -198,6 +198,7 @@ You only repeat the start commands, not the installs. Terminal 1: `cd hifzquran/
 | I press Start Reciting and nothing appears | On a computer without a GPU, wait a few seconds (the first word is slower). Check terminal 1: it should still say `HifzAI backend ready` and show no errors. |
 | My words do not turn green on a whole Surah | A whole Surah expects the Bismillah first. Say it, or choose a **Range** (step 4). |
 | Backend log says `WebSocket rejected: invalid origin` | You opened the app at an address the backend does not know. Add that address (for example `http://192.168.1.20:3000`) to `ALLOWED_ORIGINS` in `backend/.env`, comma-separated, and restart the backend. |
+| The first start prints warnings about the Hugging Face Hub (for example "unauthenticated requests" or a token) | They are harmless. They only mean the speech model is being downloaded without a Hugging Face account, which is fine. |
 | A Surah page says **"Something went wrong … fetch failed"** | The frontend cannot reach the backend. Check terminal 1: it must be running and say `HifzAI backend ready` (after you start it, give it a few seconds). |
 
 ---
@@ -220,7 +221,7 @@ cp .env.example .env.local
 
 | Setting | Default | What it does |
 |---|---|---|
-| `ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Web addresses allowed to use the backend, comma-separated. Add yours if you open the app from another address or deploy it. (If the setting is absent, the code also allows hifzai.com and quran.com.) |
+| `ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Web addresses allowed to use the backend, comma-separated. Add yours if you open the app from another address or deploy it. If the setting is absent, only these two local addresses are allowed. |
 | `MODEL_NAME` | `OdyAsh/faster-whisper-base-ar-quran` | The speech model downloaded from Hugging Face. |
 | `QURAN_API_BASE_URL` | `https://api.quran.com/api/v4` | Where the Quran text is downloaded from (first start only). |
 | `ASR_DEVICE`, `ASR_COMPUTE_TYPE` | automatic | Force `cuda` or `cpu`, and `float16` or `int8` (see [GPU Support](#gpu-support)). |
@@ -238,7 +239,6 @@ The server port is not a setting: it is chosen with `--port` when you start the 
 | `NEXT_PUBLIC_PYTHON_BACKEND_WS` | `ws://<the address in your browser>:8000` | The backend's WebSocket address (the live audio connection). |
 | `PYTHON_BACKEND_URL` | not set | Like the first one, but for the server side of the frontend only (useful when deployed). |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | The site's public address, used for link previews once deployed. |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | empty | Not used by the current code. |
 
 ### Optional: save finished sessions with Supabase
 

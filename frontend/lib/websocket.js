@@ -17,7 +17,7 @@ export function openHifzSession({
   onReconnecting,
 }) {
   // The backend serves the socket at /ws and expects a JSON "sessionStart" first
-  // (API.md §3). Accept the backend URL with OR without a trailing "/ws" so a value
+  // (docs/API.md, WebSocket /ws). Accept the backend URL with OR without a trailing "/ws" so a value
   // like "ws://host:8000/ws" never becomes a broken "/ws/ws" path that 404s the handshake.
   let backendBase = process.env.NEXT_PUBLIC_PYTHON_BACKEND_WS;
   if (!backendBase) {

@@ -20,6 +20,10 @@ for output_stream in (sys.stdout, sys.stderr):
 # Load backend/.env so SUPABASE_*, MODEL_NAME, etc. are visible to os.getenv.
 load_dotenv()
 
+# On Windows without Developer Mode the Hugging Face cache cannot use symlinks and prints a long
+# warning on the first model download. It only costs a little disk space, so keep the output calm.
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+
 from quran.loader import load_quran_data, get_surah
 from asr import whisper_engine
 from supabase_db import get_supabase_client
@@ -69,7 +73,7 @@ async def health_check():
 
     status = "ready" if quran_loaded and model_loaded else "starting"
 
-    # API.md §GET /health requires this shape
+    # docs/API.md (GET /health) documents this shape
     response = {
         "status": status,
         "quranLoaded": quran_loaded,
@@ -101,7 +105,7 @@ async def get_surah_endpoint(surah_number: int):
     return surah_data
 
 
-# One word's outcome inside a session (matches API.md / Database.md word_results).
+# One word's outcome inside a session (matches docs/API.md and the word_results column in docs/DATABASE.md).
 class WordResultItem(BaseModel):
     wordIndex: int = Field(ge=0)
     status: Literal["correct", "wrong", "skipped"]
@@ -110,7 +114,7 @@ class WordResultItem(BaseModel):
     spoken: str | None = None
 
 
-# POST /session body — shape defined in API.md §POST /session.
+# POST /session body — shape documented in docs/API.md (POST /session).
 # Field constraints mirror the hifz_sessions DB CHECKs so bad input is rejected with a clean
 # 422 here instead of surfacing as an opaque 500 from the database on insert.
 class SessionCreateRequest(BaseModel):

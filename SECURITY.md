@@ -20,7 +20,7 @@ Include what you found, the steps to reproduce it and the version (commit) you t
 
 ## What protects the backend
 
-- **Origin allow-list.** The WebSocket refuses a connection (close code `1008`) whose `Origin` header is not in `ALLOWED_ORIGINS`, and CORS uses the same list. Set `ALLOWED_ORIGINS` in `backend/.env` for your deployment. The built-in default covers `localhost` and a few named hosts, so review it before exposing a backend publicly.
+- **Origin allow-list.** The WebSocket refuses a connection (close code `1008`) whose `Origin` header is not in `ALLOWED_ORIGINS`, and CORS uses the same list. Set `ALLOWED_ORIGINS` in `backend/.env` for your deployment. The built-in default allows only `http://localhost:3000` and `http://127.0.0.1:3000`, so add your own address when you deploy.
 - **Capacity cap.** At most `MAX_CONCURRENT_SESSIONS` (default 10) recitation sessions run at once. Extra clients get a `CAPACITY_ERROR` and close code `1013`, so a burst cannot exhaust the CPU or GPU.
 - **Input validation.** `POST /session` is validated field by field (ranges, allowed statuses, `endAyah >= startAyah`), and a bad request gets a `422` instead of reaching the database.
 - **Row Level Security.** The only table has RLS on, with insert-only access for the public key and no read access. See [docs/DATABASE.md](docs/DATABASE.md).

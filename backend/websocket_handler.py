@@ -7,9 +7,9 @@ from fastapi import WebSocket, WebSocketDisconnect
 from alignment.engine import create_session, process_transcription, skip_word
 from asr.whisper_engine import transcribe_audio_chunk
 
-# Security: Origin validation to prevent unauthorized connections (Security.md §5)
-# Replaced LAN IP and hardcoded list with an environment variable.
-DEFAULT_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://hifzai.com,https://quran.com,https://www.quran.com"
+# Security: Origin validation to prevent unauthorized connections (see SECURITY.md, "What protects the backend").
+# By default only the local frontend may connect; set ALLOWED_ORIGINS in backend/.env to add your own addresses.
+DEFAULT_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", DEFAULT_ORIGINS)
 ALLOWED_ORIGINS = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
 
@@ -130,7 +130,7 @@ async def process_audio(websocket: WebSocket, state):
             transcription, speech_detected = await asyncio.to_thread(
                 transcribe_audio_chunk, audio_array, expected_prompt
             )
-            audio_array = None  # privacy: never retain audio (Security.md §2)
+            audio_array = None  # privacy: never retain audio (see SECURITY.md)
             if DEBUG_ASR:
                 print(f"[asr]   speech={speech_detected} text='{transcription}'")
 

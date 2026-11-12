@@ -13,10 +13,27 @@ Inspired by [Tarteel AI](https://tarteel.ai)'s approach to recitation feedback, 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="HifzAI home page — search and select any of the 114 Surahs" width="68%">
-  &nbsp;
-  <img src="docs/screenshots/mobile.png" alt="HifzAI on mobile" width="22%">
+  <img src="docs/screenshots/01-home.webp" alt="HifzAI home page: search and select any of the 114 Surahs" width="100%">
 </p>
+
+<p align="center">
+  <img src="docs/screenshots/03-session-ready.webp" alt="Memorize mode, ready to recite: pick an ayah range and press Start Reciting" width="49%">
+  <img src="docs/screenshots/04-session-live.webp" alt="Mid-recitation: correct words in green, a mistake in red, a skipped word in orange" width="49%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/05-summary.webp" alt="Session summary with accuracy and correct, mistake and skipped counts" width="49%">
+  <img src="docs/screenshots/06-summary-breakdown.webp" alt="Word-by-word breakdown with a fix-it note for each mistake" width="49%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/m01-home.webp" alt="Home on a phone" width="23%">
+  <img src="docs/screenshots/m03-session-ready.webp" alt="Memorize mode on a phone" width="23%">
+  <img src="docs/screenshots/m04-session-live.webp" alt="Live feedback on a phone" width="23%">
+  <img src="docs/screenshots/m05-summary.webp" alt="Session summary on a phone" width="23%">
+</p>
+
+> The live-session and summary screenshots show a **scripted** recitation (one wrong word, one skipped word), captured without a microphone or the speech model, so the layout is the real interface but the recognition result is made up. The Quran text is the real data the backend serves.
 
 ---
 

@@ -27,7 +27,7 @@ flowchart LR
 1. **Capture.** `frontend/public/audio-processor.js` is an AudioWorklet. It resamples the microphone to 16 kHz mono and posts overlapping windows of `Float32` samples to the page. `frontend/lib/audio.js` wraps the microphone and the worklet, and `HifzSession.js` sends each window as a binary WebSocket frame.
 2. **Receive.** The backend's receiver task (`websocket_handler.py`) overwrites a single slot with the newest frame. Older frames that were never processed are dropped on purpose.
 3. **Gate.** A processor task takes the frame, and if its raw peak is below `0.05` treats it as silence and skips the model entirely. Otherwise it normalises the volume so quiet reciters still work.
-4. **Recognise.** `asr/whisper_engine.py` runs faster-whisper with a Quran fine-tuned model (default `OdyAsh/faster-whisper-base-ar-quran`, set with `MODEL_NAME`). Voice-activity filtering is on, and segments Whisper itself marks as probably not speech are thrown away.
+4. **Recognise.** `asr/whisper_engine.py` runs faster-whisper with a Quran fine-tuned model (default `OdyAsh/faster-whisper-base-ar-quran`, set with `MODEL_NAME`), a conversion of Tarteel AI's Quran fine-tune of OpenAI Whisper base. No model was trained for this project. Voice-activity filtering is on, and segments Whisper itself marks as probably not speech are thrown away.
 5. **Align.** `alignment/engine.py` matches what was heard to the next words of the chosen range and emits one `wordResult` per word it can decide on.
 6. **Classify.** When a word is judged wrong, `tajweed/checker.py` names the kind of mistake.
 7. **Show.** The browser colours each word as results arrive and, at the end, shows the summary. See the [API reference](API.md) for the exact messages.

@@ -70,7 +70,7 @@ They must never be merged into one.
        |  Next.js API Routes |    |   Python FastAPI (Port 8000)    |
        |                     |    |                                  |
        |  - Supabase queries |    |  - faster-whisper 1.2.1        |
-       |  - Surah metadata   |    |    tarteel-ai Quran model       |
+       |  - Surah metadata   |    |    Quran model (OdyAsh)         |
        |  - Session state    |    |  - Silero VAD (tuned params)   |
        |  - Auth (Post-MVP)  |    |  - Sliding window + overlap    |
        +---------------------+    |  - Open decoding (no prompt)   |

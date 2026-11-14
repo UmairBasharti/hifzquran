@@ -4,7 +4,7 @@
 
 **HifzAI** is a free, open-source Quran memorization (Hifz) web app that helps you test and strengthen your memorization in real time. Press the mic, recite from memory — HifzAI listens, hides the text, and reveals each word as you get it right, instantly flagging mistakes.
 
-Inspired by [Tarteel AI](https://tarteel.ai)'s approach to recitation feedback, built as a free, open-source alternative for the global Muslim community at zero cost.
+Inspired by [Tarteel AI](https://tarteel.ai)'s approach to recitation feedback and built on their open-source Quran model (see [Model credits](#model-credits)), as a free, open-source alternative for the global Muslim community at zero cost.
 
 > **Privacy first**: HifzAI processes all audio in memory only and discards it immediately after transcription — no audio is ever stored anywhere.
 
@@ -343,6 +343,18 @@ Short surahs are the quickest way to try the app by hand:
 ## Contributing
 
 Contributions are welcome! Please read [`AGENTS.md`](AGENTS.md) before making changes — it contains the full architecture rules, coding standards, and design decisions.
+
+---
+
+## Model credits
+
+HifzAI does not train its own speech model. It runs an open-source one:
+
+- [OpenAI Whisper](https://github.com/openai/whisper) (base) is the original architecture.
+- [Tarteel AI](https://tarteel.ai) fine-tuned it for Quran recitation: [`tarteel-ai/whisper-base-ar-quran`](https://huggingface.co/tarteel-ai/whisper-base-ar-quran) (Apache-2.0).
+- [`OdyAsh/faster-whisper-base-ar-quran`](https://huggingface.co/OdyAsh/faster-whisper-base-ar-quran) is a community conversion of that model for faster-whisper (Apache-2.0). HifzAI downloads it from Hugging Face on first run; it is not bundled in this repo.
+
+What this repo adds is the application around the model: live audio streaming, word alignment, noise handling and the word-by-word feedback.
 
 ---
 
